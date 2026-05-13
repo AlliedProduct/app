@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -67,25 +68,69 @@ const Icons = {
 const shortAddr = (addr: string) => addr.length > 10 ? `${addr.slice(0, 4)}...${addr.slice(-4)}` : addr;
 
 // toast notis
-function Toast({ message, type, onClose }: { message: string; type: string; onClose: () => void }) {
+function Toast({
+  message,
+  type,
+  txId,
+  onClose,
+}: {
+  message: string;
+  type: string;
+  txId?: string;
+  onClose: () => void;
+}) {
   useEffect(() => {
-    const t = setTimeout(onClose, 5000);
+    const t = setTimeout(onClose, 8000);
     return () => clearTimeout(t);
   }, [onClose]);
 
-  const bg = type === "success" ? "#0d9488" : type === "error" ? "#dc2626" : "#2563eb";
+  const bg =
+    type === "success"
+      ? "#0d9488"
+      : type === "error"
+      ? "#dc2626"
+      : "#2563eb";
+
   return (
-    <div style={{
-      position: "fixed", bottom: 24, right: 24, zIndex: 9999,
-      background: bg, color: "#fff", padding: "14px 24px", borderRadius: 12,
-      fontSize: 14, fontWeight: 500, boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
-      maxWidth: 400, wordBreak: "break-word",
-    }}>
+    <div
+      style={{
+        position: "fixed",
+        bottom: 24,
+        right: 24,
+        zIndex: 9999,
+        background: bg,
+        color: "#fff",
+        padding: "14px 24px",
+        borderRadius: 12,
+        fontSize: 14,
+        fontWeight: 500,
+        boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+        maxWidth: 400,
+        wordBreak: "break-word",
+      }}
+    >
       {message}
+
+      {txId && (
+        <a
+          href={`https://explorer.solana.com/tx/${txId}?cluster=devnet`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            color: "#fff",
+            fontSize: 12,
+            display: "block",
+            marginTop: 6,
+            opacity: 0.85,
+            textDecoration: "underline",
+          }}
+        >
+          View on Solana Explorer →
+        </a>
+      )}
     </div>
   );
 }
-
 // main app
 export default function CampusCoinApp() {
   const wallet = useWallet();
@@ -96,7 +141,7 @@ export default function CampusCoinApp() {
   const [activeTab, setActiveTab] = useState("wallet");
   const [balance, setBalance] = useState(0);
   const [solBalance, setSolBalance] = useState(0);
-  const [toast, setToast] = useState<{ message: string; type: string } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: string; txId?: string } | null>(null);
 
   // form states
   const [payAmount, setPayAmount] = useState("");
@@ -107,7 +152,7 @@ export default function CampusCoinApp() {
   const [merchants, setMerchants] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const showToast = (message: string, type = "success") => setToast({ message, type });
+  const showToast = (message: string, type = "success", txId?: string) => setToast({ message, type, txId });
 
   // refresh bal
   const { getBalance } = cc;
@@ -139,11 +184,11 @@ export default function CampusCoinApp() {
       refreshBalances();
       refreshMerchants();
     }
-  }, [wallet.publicKey, refreshBalances, refreshMerchants]);
+  }, [wallet.publicKey]);
 
   // handlers on chain calls
 
-  const handlePayment = async () => {
+const handlePayment = async () => {
     if (!payMerchantKey || !payAmount) return showToast("Fill in all fields", "error");
     let merchantPubkey: PublicKey;
     try {
@@ -157,7 +202,7 @@ export default function CampusCoinApp() {
     setLoading(true);
     try {
       const tx = await cc.payMerchant(merchantPubkey, amt);
-      showToast(`Payment sent! Tx: ${shortAddr(tx)}`);
+      showToast(`Payment sent! Tx: ${shortAddr(tx)}`, "success", tx);
       setPayAmount("");
       setPayMerchantKey("");
       await refreshBalances();
@@ -183,7 +228,7 @@ export default function CampusCoinApp() {
     setLoading(true);
     try {
       const tx = await cc.earnReward(studentPubkey, amt);
-      showToast(`Reward minted! Tx: ${shortAddr(tx)}`);
+      showToast(`Reward minted! Tx: ${shortAddr(tx)}`, "success", tx);
       setRewardAmount("");
       setRewardStudentKey("");
       await refreshBalances();
@@ -207,7 +252,7 @@ export default function CampusCoinApp() {
     setLoading(true);
     try {
       const tx = await cc.registerMerchant(merchantPubkey);
-      showToast(`Merchant registered! Tx: ${shortAddr(tx)}`);
+      showToast(`Merchant registered! Tx: ${shortAddr(tx)}`, "success", tx);
       setNewMerchantKey("");
       await refreshMerchants();
     } catch (err: any) {
@@ -694,7 +739,7 @@ export default function CampusCoinApp() {
                   fontSize: 12, color: "var(--cc-text-muted)",
                 }}>
                   <Icons.Shield />
-                  <span>Only the admin (mint authority) can mint rewards. The student's token account will be created automatically if it doesn't exist yet.</span>
+                  <span>Only the admin (mint authority) can mint rewards. The students token account will be created automatically if it doesnt exist yet.</span>
                 </div>
               </div>
             )}
@@ -724,7 +769,7 @@ export default function CampusCoinApp() {
           </div>
         )}
 
-        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+        {toast && <Toast message={toast.message} type={toast.type} txId={toast.txId} onClose={() => setToast(null)} />}
       </div>
     </>
   );
